@@ -1,5 +1,10 @@
 # dbmcp — spec (rev 2)
 
+> **Naming (post-build):** the pip distribution and CLI command are **`dbmcp-secure`**; the Python
+> import package, config dir (`~/.config/dbmcp`), and `DBMCP_*` env vars stay **`dbmcp`** (packages
+> can't contain a hyphen — same pattern as scikit-learn/`sklearn`). Command examples below written as
+> `dbmcp` are invoked as `dbmcp-secure`.
+
 A cross-platform (Linux + macOS) CLI that **configures, securely stores credentials for, tests,
 and launches database MCP servers**. `dbmcp` does not implement a database driver or an MCP server
 itself — it stores connection profiles + secrets, then execs the appropriate existing OSS MCP
