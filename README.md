@@ -1,4 +1,4 @@
-# dbmcp
+# dbmcp-secure
 
 Configure, securely store credentials for, test, and launch **database MCP servers**.
 
@@ -17,36 +17,40 @@ injected via **environment variables** — never argv, stdout, or logs.
 
 ```sh
 uv tool install .        # or: pip install -e . / pipx install .
-dbmcp --help
+dbmcp-secure --help
 ```
+
+The pip distribution is named **`dbmcp-secure`**; the Python import package
+stays `dbmcp` (mirroring how scikit-learn installs as `scikit-learn` but
+imports as `sklearn`).
 
 ## Quickstart
 
 ```sh
 # Store a postgres profile + secret in the OS keyring
-dbmcp add prod-pg --type postgres --host 10.0.0.5 --port 5432 \
+dbmcp-secure add prod-pg --type postgres --host 10.0.0.5 --port 5432 \
     --user dbo --dbname appdb --sslmode require
 
-dbmcp list                 # table: name, type, host:port/db, mechanism, backend
-dbmcp show prod-pg         # profile + resolved launch argv (no secret)
-dbmcp test prod-pg         # MCP initialize + probe: "OK 3.4s" | "SLOW ..." | "FAIL ..."
-dbmcp emit prod-pg --client claude-code
-dbmcp remove prod-pg       # deletes profile + secret
+dbmcp-secure list                 # table: name, type, host:port/db, mechanism, backend
+dbmcp-secure show prod-pg         # profile + resolved launch argv (no secret)
+dbmcp-secure test prod-pg         # MCP initialize + probe: "OK 3.4s" | "SLOW ..." | "FAIL ..."
+dbmcp-secure emit prod-pg --client claude-code
+dbmcp-secure remove prod-pg       # deletes profile + secret
 
 # sqlite needs no password:
-dbmcp add local-sqlite --type sqlite --dbname /path/to/app.db
+dbmcp-secure add local-sqlite --type sqlite --dbname /path/to/app.db
 ```
 
 Non-interactive use (MCP clients, scripts) reads the secret from stdin:
 
 ```sh
-printf '%s\n' "$PGPASSWORD" | dbmcp add prod-pg --type postgres \
+printf '%s\n' "$PGPASSWORD" | dbmcp-secure add prod-pg --type postgres \
     --host ... --user ... --dbname ... --password-stdin
 ```
 
 ### Launch: what MCP clients call
 
-`dbmcp launch <name>` resolves `uvx` (or the per-profile `--server-argv`
+`dbmcp-secure launch <name>` resolves `uvx` (or the per-profile `--server-argv`
 override), builds the per-db environment, and `exec`s the underlying MCP server
 over stdio. **`launch` writes zero bytes to stdout before `exec`** — stdout is
 the MCP protocol channel. Diagnostics go to stderr only.
@@ -58,7 +62,7 @@ Point your MCP client at the emitted block:
   "mcpServers": {
     "prod-pg": {
       "type": "stdio",
-      "command": "/absolute/path/to/dbmcp",
+      "command": "/absolute/path/to/dbmcp-secure",
       "args": ["launch", "prod-pg"],
       "env": {}
     }
@@ -66,8 +70,8 @@ Point your MCP client at the emitted block:
 }
 ```
 
-`dbmcp emit <name> --client claude-code` prints this block for you (absolute
-`dbmcp` path, resolved via `shutil.which`). `--client claude-desktop` omits the
+`dbmcp-secure emit <name> --client claude-code` prints this block for you (absolute
+`dbmcp-secure` path, resolved via `shutil.which`). `--client claude-desktop` omits the
 `"type"` key.
 
 ## Security model
@@ -119,7 +123,7 @@ tool targets read-only MCP usage and has **no write path** by design.
 ### Cold `uvx` note
 
 The first `uvx` run downloads and builds the server tool; on a cold cache this
-can take longer than 10s, so `dbmcp test` will report `SLOW` (not `FAIL`).
+can take longer than 10s, so `dbmcp-secure test` will report `SLOW` (not `FAIL`).
 `OK` means the handshake completed in under 10s.
 
 ### Tunnel caveat
@@ -141,12 +145,12 @@ the local port is not listening, then still attempts the connection.
   "use `--backend encrypted-file`".
 - **macOS Keychain ACL re-prompt:** the Keychain entry created for `dbmcp` is
   tied to the executable that stored it. `uv tool upgrade` replaces the
-  `uvx`/`dbmcp` binary, which can trigger an ACL re-prompt (or a denial) the
-  next time the secret is read. Re-run `dbmcp add <name>` to re-store the
+  `uvx`/`dbmcp-secure` binary, which can trigger an ACL re-prompt (or a denial) the
+  next time the secret is read. Re-run `dbmcp-secure add <name>` to re-store the
   secret if the keychain no longer returns it.
 - **encrypted-file trade-off:** the fallback backend encrypts
   `secrets.enc` (scrypt-derived key, AES-256-GCM; see below) with a passphrase
-  from `$DBMCP_PASSPHRASE` or an interactive prompt. `dbmcp emit` will warn that
+  from `$DBMCP_PASSPHRASE` or an interactive prompt. `dbmcp-secure emit` will warn that
   the passphrase then lives in the MCP client config file. Acceptable for
   headless Linux; prefer the OS keyring where a login keyring exists.
 
@@ -182,7 +186,7 @@ pytest --cov=dbmcp --cov-report=term-missing   # >= 80% line coverage
 
 ## Caveats & out of scope (v1)
 
-- Tunnel management (`dbmcp tunnel`) is phase 2 — detect + warn only.
+- Tunnel management (`dbmcp-secure tunnel`) is phase 2 — detect + warn only.
 - Windows Credential Manager is phase 2.
 - MongoDB/MSSQL are phase 2 (the registry makes them additive).
 - `dbmcp` does not write your MCP client config — `emit` prints a block you paste.

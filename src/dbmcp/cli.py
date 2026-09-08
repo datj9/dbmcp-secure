@@ -169,9 +169,9 @@ def launch_cmd(name: str) -> None:
 def emit(name: str, client: str) -> None:
     """Emit an MCP client JSON block."""
     p = get_profile(name)
-    dbmcp_path = shutil.which("dbmcp")
+    dbmcp_path = shutil.which("dbmcp-secure")
     if dbmcp_path is None:
-        click.echo("dbmcp not found in PATH", err=True)
+        click.echo("dbmcp-secure not found in PATH", err=True)
         sys.exit(1)
 
     env: dict[str, str] = {}

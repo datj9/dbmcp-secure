@@ -74,7 +74,7 @@ def _run(tmp_path: Path, args: list[str], input: str | None = None, env=None) ->
     """Invoke the real main() entrypoint exactly as the console script does."""
     merged = _env(tmp_path, **(env or {}))
     old_argv, old_stdin, old_env = sys.argv, sys.stdin, dict(os.environ)
-    sys.argv = ["dbmcp", *args]
+    sys.argv = ["dbmcp-secure", *args]
     if input is not None:
         sys.stdin = io.StringIO(input)
     os.environ.clear()
@@ -363,21 +363,21 @@ def test_emit_claude_code_format(tmp_path: Path, monkeypatch) -> None:
         ),
         _config(tmp_path),
     )
-    monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: "/abs/path/dbmcp")
+    monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: "/abs/path/dbmcp-secure")
     result = _invoke(tmp_path, ["emit", "prod-pg", "--client", "claude-code"])
     assert result.exit_code == 0, result.output
     block = json.loads(result.stdout)
     server = block["mcpServers"]["prod-pg"]
     assert server["type"] == "stdio"
     assert server["args"] == ["launch", "prod-pg"]
-    assert server["command"] == "/abs/path/dbmcp"
+    assert server["command"] == "/abs/path/dbmcp-secure"
     assert server["env"] == {}
     assert PASSWORD not in result.output
 
 
 def test_emit_claude_desktop_no_type_key(tmp_path: Path, monkeypatch) -> None:
     _add_pg(tmp_path)
-    monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: "/abs/path/dbmcp")
+    monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: "/abs/path/dbmcp-secure")
     result = _invoke(tmp_path, ["emit", "prod-pg", "--client", "claude-desktop"])
     assert result.exit_code == 0, result.output
     server = json.loads(result.stdout)["mcpServers"]["prod-pg"]
@@ -386,7 +386,7 @@ def test_emit_claude_desktop_no_type_key(tmp_path: Path, monkeypatch) -> None:
 
 def test_emit_encrypted_file_notes_passphrase_env(tmp_path: Path, monkeypatch) -> None:
     _add_pg(tmp_path)
-    monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: "/abs/path/dbmcp")
+    monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: "/abs/path/dbmcp-secure")
     result = _invoke(tmp_path, ["emit", "prod-pg"])
     assert result.exit_code == 0, result.output
     server = json.loads(result.stdout)["mcpServers"]["prod-pg"]
@@ -394,12 +394,12 @@ def test_emit_encrypted_file_notes_passphrase_env(tmp_path: Path, monkeypatch) -
     assert "DBMCP_PASSPHRASE" in result.stderr
 
 
-def test_emit_missing_dbmcp_in_path_fails(tmp_path: Path, monkeypatch) -> None:
+def test_emit_missing_dbmcp_secure_in_path_fails(tmp_path: Path, monkeypatch) -> None:
     _add_pg(tmp_path)
     monkeypatch.setattr("dbmcp.cli.shutil.which", lambda name: None)
     result = _run(tmp_path, ["emit", "prod-pg"])
     assert result.exit_code == 1
-    assert "dbmcp not found" in result.stderr
+    assert "dbmcp-secure not found" in result.stderr
 
 
 # --- test ---
