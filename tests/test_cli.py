@@ -306,6 +306,66 @@ def test_add_unknown_db_type_rejected(tmp_path: Path) -> None:
     assert "Traceback" not in result.stderr
 
 
+def test_add_server_argv_malformed_json_clean_error(tmp_path: Path) -> None:
+    result = _run(
+        tmp_path,
+        ["add", "x", "--type", "sqlite", "--dbname", "/tmp/a.db", "--server-argv", "not json"],
+    )
+    assert result.exit_code == 1
+    assert "Traceback" not in result.stderr
+    assert "--server-argv is not valid JSON" in result.stderr
+
+
+@pytest.mark.parametrize("bad", ['"x"', "{}", "5"])
+def test_add_server_argv_not_a_list(tmp_path: Path, bad: str) -> None:
+    result = _run(
+        tmp_path,
+        ["add", "x", "--type", "sqlite", "--dbname", "/tmp/a.db", "--server-argv", bad],
+    )
+    assert result.exit_code == 1
+    assert "Traceback" not in result.stderr
+    assert "--server-argv must be a JSON array of strings" in result.stderr
+
+
+def test_add_server_argv_empty_list(tmp_path: Path) -> None:
+    result = _run(
+        tmp_path,
+        ["add", "x", "--type", "sqlite", "--dbname", "/tmp/a.db", "--server-argv", "[]"],
+    )
+    assert result.exit_code == 1
+    assert "Traceback" not in result.stderr
+    assert "--server-argv must not be empty" in result.stderr
+
+
+def test_add_server_argv_non_string_element(tmp_path: Path) -> None:
+    result = _run(
+        tmp_path,
+        ["add", "x", "--type", "sqlite", "--dbname", "/tmp/a.db", "--server-argv", '["uvx", 5]'],
+    )
+    assert result.exit_code == 1
+    assert "Traceback" not in result.stderr
+    assert "--server-argv must contain only strings" in result.stderr
+
+
+def test_add_server_argv_valid_persists(tmp_path: Path) -> None:
+    result = _invoke(
+        tmp_path,
+        [
+            "add",
+            "pin",
+            "--type",
+            "sqlite",
+            "--dbname",
+            "/tmp/a.db",
+            "--server-argv",
+            '["uvx","mcp-server-sqlite","--db-path","/tmp/a.db"]',
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    profile = get_profile("pin", _config(tmp_path))
+    assert profile.mcp_server_argv == ["uvx", "mcp-server-sqlite", "--db-path", "/tmp/a.db"]
+
+
 # --- list / show ---
 
 
