@@ -7,7 +7,7 @@ import sys
 import click
 
 from dbmcp import __version__
-from dbmcp.errors import DbmcpError
+from dbmcp.errors import ConfigError, DbmcpError
 from dbmcp.handshake import HandshakeResult, mcp_initialize
 from dbmcp.launcher import launch, resolve_tool, warn_if_tunnel
 from dbmcp.profiles import (
@@ -60,9 +60,7 @@ def add(
 ) -> None:
     """Add a new profile."""
     spec = get_spec(db_type)
-    mcp_server_argv = None
-    if server_argv is not None:
-        mcp_server_argv = json.loads(server_argv)
+    mcp_server_argv = _parse_server_argv(server_argv) if server_argv is not None else None
 
     profile = Profile(
         name=name,
@@ -214,6 +212,21 @@ def main() -> None:
 
 
 # --- helpers ---
+
+
+def _parse_server_argv(raw: str) -> list[str]:
+    """Parse and validate the --server-argv JSON array. Raises ConfigError on bad input."""
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"--server-argv is not valid JSON: {exc.msg}") from exc
+    if not isinstance(parsed, list):
+        raise ConfigError("--server-argv must be a JSON array of strings")
+    if not parsed:
+        raise ConfigError("--server-argv must not be empty")
+    if not all(isinstance(item, str) for item in parsed):
+        raise ConfigError("--server-argv must contain only strings")
+    return parsed
 
 
 def _read_secret(password_stdin: bool) -> str | None:
